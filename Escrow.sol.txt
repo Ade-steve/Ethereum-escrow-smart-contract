@@ -1,0 +1,47 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+contract Escrow {
+
+    address public client;
+    address public freelancer;
+    uint public amount;
+    bool public  isFunded;
+    bool public isCompleted;
+
+    constructor(address _freelancer){
+        client = msg.sender;
+        freelancer = _freelancer;
+    }
+    //client send money into contract
+    function deposit() public payable{
+        require(msg.sender == client, "Only client can deposit");
+        require(!isFunded, "Already funded");
+
+        amount = msg.value;
+        isFunded = true;
+    }
+    //client appreoves work and releases money
+    function releasePayment() public {
+        require(msg.sender == client, "Only client can release");
+        require(isFunded, "Not Funded yet");
+        require(!isCompleted, "Already completed");
+        (bool success, ) = payable(freelancer).call{value: amount}("");
+
+        require(success, "Transfer failed" );
+
+        isCompleted = true;
+    }
+
+    //refund if needed
+    function refund() public {
+        require(msg.sender == client, "Only client can refund");
+        require(isFunded, "Not funded");
+
+        (bool success, ) = payable(client).call{value: amount}("");
+        require(success, "Refund failed");
+
+        isFunded = false;
+    }
+
+}
